@@ -76,7 +76,7 @@ module ParallelTests
 
 
         def runtime_logging
-          " --format ParallelTests::Gherkin::RuntimeLogger --out #{runtime_log}"
+          " --format progress --out #{runtime_log}"
         end
 
         def runtime_log
