@@ -17,7 +17,7 @@ module ParallelTests
         end
 
         def test_suffix
-          "_test.rb"
+          /_(test|spec).rb$/
         end
 
         def test_file_name
@@ -60,10 +60,16 @@ module ParallelTests
 
         def execute_command_and_capture_output(env, cmd, silence)
           # make processes descriptive / visible in ps -ef
+          windows = RbConfig::CONFIG['host_os'] =~ /cygwin|mswin|mingw|bccwin|wince|emx/ 
+          separator = windows ? ' & ' : ';'
           exports = env.map do |k,v|
-            "#{k}=#{v};export #{k}"
-          end.join(";")
-          cmd = "#{exports};#{cmd}"
+            if windows
+              "(SET \"#{k}=#{v}\")"
+            else
+              "#{k}=#{v};export #{k}"
+            end
+          end.join(separator)
+          cmd = "#{exports}#{separator}#{cmd}"
 
           output = open("|#{cmd}", "r") { |output| capture_output(output, silence) }
           exitstatus = $?.exitstatus
@@ -145,7 +151,7 @@ module ParallelTests
           (tests || []).map do |file_or_folder|
             if File.directory?(file_or_folder)
               files = files_in_folder(file_or_folder, options)
-              files.grep(/#{Regexp.escape test_suffix}$/).grep(options[:pattern]||//)
+              files.grep(test_suffix).grep(options[:pattern]||//)
             else
               file_or_folder
             end

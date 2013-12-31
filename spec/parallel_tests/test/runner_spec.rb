@@ -3,6 +3,7 @@ require "parallel_tests/test/runner"
 
 describe ParallelTests::Test::Runner do
   test_tests_in_groups(ParallelTests::Test::Runner, 'test', '_test.rb')
+  test_tests_in_groups(ParallelTests::Test::Runner, 'test', '_spec.rb')
 
   describe ".run_tests" do
     def call(*args)
@@ -42,7 +43,7 @@ describe ParallelTests::Test::Runner do
 
     it "does sort when not passed do_sort option" do
       ParallelTests::Test::Runner.stub!(:tests_with_runtime).and_return([])
-      ParallelTests::Grouper.should_receive(:largest_first).and_return([])
+      ParallelTests::Grouper.should_receive(:group_features_by_size).and_return([])
       call([], 1)
     end
 
@@ -132,29 +133,6 @@ EOF
       ParallelTests::Test::Runner.send(:find_tests, *args)
     end
 
-    def with_files(files)
-      begin
-        root = "/tmp/test-find_tests-#{rand(999)}"
-        `mkdir #{root}`
-        files.each do |file|
-          parent = "#{root}/#{File.dirname(file)}"
-          `mkdir -p #{parent}` unless File.exist?(parent)
-          `touch #{root}/#{file}`
-        end
-        yield root
-      ensure
-        `rm -rf #{root}`
-      end
-    end
-
-    def inside_dir(dir)
-      old = Dir.pwd
-      Dir.chdir dir
-      yield
-    ensure
-      Dir.chdir old
-    end
-
     it "finds test in folders with appended /" do
       with_files(['b/a_test.rb']) do |root|
         call(["#{root}/"]).sort.should == [
@@ -210,7 +188,7 @@ EOF
 
     it "does not expand paths" do
       with_files(['a/x_test.rb']) do |root|
-        inside_dir root do
+        Dir.chdir root do
           call(['a']).sort.should == [
             "a/x_test.rb"
           ]
@@ -220,12 +198,28 @@ EOF
 
     it "finds test files in folders by pattern" do
       with_files(['a/x_test.rb','a/y_test.rb','a/z_test.rb']) do |root|
-        inside_dir root do
+        Dir.chdir root do
           call(["a"], :pattern => /^a\/(y|z)_test/).sort.should == [
             "a/y_test.rb",
             "a/z_test.rb",
           ]
         end
+      end
+    end
+
+    it "doesn't find bakup files with the same name as test files" do
+      with_files(['a/x_test.rb','a/x_test.rb.bak']) do |root|
+        call(["#{root}/"]).should == [
+          "#{root}/a/x_test.rb",
+        ]
+      end
+    end
+
+    it "finds minispec files" do
+      with_files(['a/x_spec.rb']) do |root|
+        call(["#{root}/"]).should == [
+          "#{root}/a/x_spec.rb",
+        ]
       end
     end
 

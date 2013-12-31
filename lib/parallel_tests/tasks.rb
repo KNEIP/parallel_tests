@@ -8,7 +8,7 @@ module ParallelTests
       end
 
       def run_in_parallel(cmd, options={})
-        count = " -n #{options[:count]}" if options[:count]
+        count = " -n #{options[:count]}" unless options[:count].to_s.empty?
         executable = File.expand_path("../../../bin/parallel_test", __FILE__)
         command = "#{executable} --exec '#{cmd}'#{count}#{' --non-parallel' if options[:non_parallel]}"
         abort unless system(command)
@@ -38,9 +38,11 @@ module ParallelTests
       end
 
       def check_for_pending_migrations
-        abort_migrations = "db:abort_if_pending_migrations"
-        if Rake::Task.task_defined?(abort_migrations)
-          Rake::Task[abort_migrations].invoke
+        ["db:abort_if_pending_migrations", "app:db:abort_if_pending_migrations"].each do |abort_migrations|
+          if Rake::Task.task_defined?(abort_migrations)
+            Rake::Task[abort_migrations].invoke
+            break
+          end
         end
       end
 
@@ -84,7 +86,8 @@ namespace :parallel do
     else
       # there is no separate dump / load for schema_format :sql -> do it safe and slow
       args = args.to_hash.merge(:non_parallel => true) # normal merge returns nil
-      ParallelTests::Tasks.run_in_parallel('rake db:test:prepare --trace', args)
+      taskname = Rake::Task.task_defined?('db:test:prepare') ? 'db:test:prepare' : 'app:db:test:prepare'
+      ParallelTests::Tasks.run_in_parallel("rake #{taskname}", args)
     end
   end
 
@@ -99,6 +102,12 @@ namespace :parallel do
   task :load_schema, :count do |t,args|
     command = "rake db:schema:load RAILS_ENV=#{ParallelTests::Tasks.rails_env}"
     ParallelTests::Tasks.run_in_parallel(ParallelTests::Tasks.suppress_output(command, "^   ->\\|^-- "), args)
+  end
+
+  # load the structure from the structure.sql file
+  desc "load structure for test databases via db:structure:load --> parallel:load_structure[num_cpus]"
+  task :load_structure, :count do |t,args|
+    ParallelTests::Tasks.run_in_parallel("rake db:structure:load RAILS_ENV=#{ParallelTests::Tasks.rails_env}", args)
   end
 
   desc "load the seed data from db/seeds.rb via db:seed --> parallel:seed[num_cpus]"

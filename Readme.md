@@ -17,14 +17,6 @@ As gem
 # add to Gemfile
 gem "parallel_tests", :group => :development
 ```
-OR as plugin
-
-    rails plugin install git://github.com/grosser/parallel_tests.git
-
-```ruby
-# add to Gemfile
-gem "parallel", :group => :development
-```
 
 ### Add to `config/database.yml`
 ParallelTests uses 1 database per test-process.
@@ -98,10 +90,12 @@ end
 Loggers
 ===================
 
-Even process runtimes
------------------
+Even test group run-times
+-------------------------
 
-Log test runtime to give each process the same runtime.
+Add the `RuntimeLogger` to log how long each test takes to run.
+This log file will be loaded on the next test run, and the tests will be grouped
+so that each process should finish around the same time.
 
 Rspec: Add to your `.rspec_parallel` (or `.rspec`) :
 
@@ -153,6 +147,7 @@ Or add the formatter to the `parallel:` profile of your `cucumber.yml`:
 
     parallel: --format progress --format ParallelTests::Cucumber::FailuresLogger --out tmp/cucumber_failures.log
 
+Note if your `cucumber.yml` default profile uses `<%= std_opts %>` you may need to insert this as follows `parallel: <%= std_opts %> --format progress...`
 
 To rerun failures:
 
@@ -218,6 +213,7 @@ TIPS
  - [RSpec] Instantly see failures (instead of just a red F) with [rspec-instafail](https://github.com/grosser/rspec-instafail)
  - [Bundler] if you have a `Gemfile` then `bundle exec` will be used to run tests
  - [Cucumber] add a `parallel: foo` profile to your `config/cucumber.yml` and it will be used to run parallel tests
+ - [Cucumber] Pass in cucumber options by not giving the options an identifier ex: `rake parallel:features[,,'cucumber_opts']`
  - [Capybara setup](https://github.com/grosser/parallel_tests/wiki)
  - [Sphinx setup](https://github.com/grosser/parallel_tests/wiki)
  - [Capistrano setup](https://github.com/grosser/parallel_tests/wiki/Remotely-with-capistrano) let your tests run on a big box instead of your laptop
@@ -226,6 +222,7 @@ TIPS
  - [ZSH] use quotes to use rake arguments `rake "parallel:prepare[3]"`
  - [email_spec and/or action_mailer_cache_delivery](https://github.com/grosser/parallel_tests/wiki)
  - [Memcached] use different namespaces e.g. `config.cache_store = ..., :namespace => "test_#{ENV['TEST_ENV_NUMBER']}"`
+ - [zeus-parallel_tests](https://github.com/sevos/zeus-parallel_tests)
 
 TODO
 ====
@@ -290,6 +287,10 @@ inspired by [pivotal labs](http://pivotallabs.com/users/miked/blog/articles/849-
  - [Felix Clack](https://github.com/felixclack)
  - [Izaak Alpert](https://github.com/karlhungus)
  - [Micah Geisel](https://github.com/botandrose)
+ - [Exoth](https://github.com/Exoth)
+ - [sidfarkus](https://github.com/sidfarkus)
+ - [Colin Harris](https://github.com/aberant)
+ - [Wataru MIYAGUNI](https://github.com/gongo)
 
 [Michael Grosser](http://grosser.it)<br/>
 michael@grosser.it<br/>
